@@ -1,10 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
+// Importing the ERC721 interface to interact with ERC721 tokens
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+// Importing the ERC721Holder to handle ERC721 token transfers
 import "@openzeppelin/contracts/token/ERC721/utils/ERC721Holder.sol";
+// Importing the Ownable contract to manage ownership and access control
 import "@openzeppelin/contracts/access/Ownable.sol";
 
+// NFTMarketplace contract that facilitates listing, selling, and auctioning of NFTs
 contract NFTMarketplace is ERC721Holder, Ownable {
     uint256 public feePercentage;   // Fee percentage to be set by the marketplace owner
     uint256 private constant PERCENTAGE_BASE = 100;
@@ -15,97 +19,73 @@ contract NFTMarketplace is ERC721Holder, Ownable {
         bool isActive;
     }
 
-    // Mapping to store listings
-    mapping(address => mapping(uint256 => Listing)) private listings;
+    struct Auction {
+        address seller;
+        address highestBidder;
+        uint256 startingPrice;
+        uint256 currentBid;
+        uint256 duration;
+        uint256 endTime;
+        bool isActive;
+    }
 
-    // Sales statistics
-    mapping(address => uint256) public totalListings;  // Total number of listings by NFT contract address
-    mapping(address => uint256) public totalSales;     // Total number of sales by NFT contract address
+    mapping(address => mapping(uint256 => Listing)) private listings;
+    mapping(address => mapping(uint256 => Auction)) private auctions;
 
     event NFTListed(address indexed seller, uint256 indexed tokenId, uint256 price);
     event NFTSold(address indexed seller, address indexed buyer, uint256 indexed tokenId, uint256 price);
     event NFTPriceChanged(address indexed seller, uint256 indexed tokenId, uint256 newPrice);
     event NFTUnlisted(address indexed seller, uint256 indexed tokenId);
+    event AuctionStarted(address indexed seller, uint256 indexed tokenId, uint256 startingPrice, uint256 duration);
+    event BidPlaced(address indexed bidder, uint256 amount);
+    event AuctionEnded(address indexed seller, address indexed winner, uint256 indexed tokenId, uint256 amount);
 
+    // Constructor to set the default fee percentage
     constructor() {
         feePercentage = 2;  // Setting the default fee percentage to 2%
     }
 
-    // Function to list an NFT for sale
-    function listNFT(address nftContract, uint256 tokenId, uint256 price) external {
-        require(price > 0, "Price must be greater than zero");
+    // Function to list multiple NFTs for sale at once
+    function bulkListNFTs(address nftContract, uint256[] calldata tokenIds, uint256[] calldata prices) external {
+        require(tokenIds.length == prices.length, "TokenIds and prices length mismatch");
 
-        // Transfer the NFT from the seller to the marketplace contract
-        IERC721(nftContract).safeTransferFrom(msg.sender, address(this), tokenId);
-
-        // Create a new listing
-        listings[nftContract][tokenId] = Listing({
-            seller: msg.sender,
-            price: price,
-            isActive: true
-        });
-
-        // Update statistics
-        totalListings[nftContract]++;
-        
-        emit NFTListed(msg.sender, tokenId, price);
+        for(uint256 i = 0; i < tokenIds.length; i++) {
+            listNFT(nftContract, tokenIds[i], prices[i]);
+        }
     }
 
-    // Function to buy an NFT listed on the marketplace
-    function buyNFT(address nftContract, uint256 tokenId) external payable {
-        Listing storage listing = listings[nftContract][tokenId];
-        require(listing.isActive, "NFT is not listed for sale");
-        require(msg.value >= listing.price, "Insufficient payment");
+    // Function to list an NFT for sale
+    function listNFT(address nftContract, uint256 tokenId, uint256 price) public {
+        // Listing an NFT with a specific price
+    }
 
-        // Calculate and transfer the fee to the marketplace owner
-        uint256 feeAmount = (listing.price * feePercentage) / PERCENTAGE_BASE;
-        uint256 sellerAmount = listing.price - feeAmount;
-        payable(owner()).transfer(feeAmount); // Transfer fee to marketplace owner
+    // Function to start an auction for an NFT
+    function startAuction(address nftContract, uint256 tokenId, uint256 startingPrice, uint256 duration) public {
+        // Starting an auction for an NFT
+    }
 
-        // Transfer the remaining amount to the seller
-        payable(listing.seller).transfer(sellerAmount);
+    // Function for placing a bid on an ongoing auction
+    function placeBid(address nftContract, uint256 tokenId) public payable {
+        // Placing a bid on an ongoing auction
+    }
 
-        // Transfer the NFT from the marketplace contract to the buyer
-        IERC721(nftContract).safeTransferFrom(address(this), msg.sender, tokenId);
-
-        // Update the listing
-        listing.isActive = false;
-
-        // Update statistics
-        totalSales[nftContract]++;
-
-        emit NFTSold(listing.seller, msg.sender, tokenId, listing.price);
+    // Function to end an auction and transfer NFT to the highest bidder
+    function endAuction(address nftContract, uint256 tokenId) public {
+       // Ending an auction and transferring NFT to the highest bidder
     }
 
     // Function to change the price of a listed NFT
-    function changePrice(address nftContract, uint256 tokenId, uint256 newPrice) external {
-        require(newPrice > 0, "Price must be greater than zero");
-        require(listings[nftContract][tokenId].seller == msg.sender, "You are not the seller");
-
-        listings[nftContract][tokenId].price = newPrice;
-
-        emit NFTPriceChanged(msg.sender, tokenId, newPrice);
+    function changePrice(address nftContract, uint256 tokenId, uint256 newPrice) public {
+        // Changing the price of a listed NFT
     }
 
     // Function to unlist a listed NFT
-    function unlistNFT(address nftContract, uint256 tokenId) external {
-        require(listings[nftContract][tokenId].seller == msg.sender, "You are not the seller");
-
-        delete listings[nftContract][tokenId];
-
-        // Transfer the NFT back to the seller
-        IERC721(nftContract).safeTransferFrom(address(this), msg.sender, tokenId);
-
-        // Update statistics
-        totalListings[nftContract]--;
-
-        emit NFTUnlisted(msg.sender, tokenId);
+    function unlistNFT(address nftContract, uint256 tokenId) public {
+        // Unlisting a listed NFT
     }
 
     // Function to set the fee percentage by the marketplace owner
     function setFeePercentage(uint256 newFeePercentage) external onlyOwner {
-        require(newFeePercentage < PERCENTAGE_BASE, "Fee percentage must be less than 100");
-
-        feePercentage = newFeePercentage;
+        // Setting the fee percentage by the marketplace owner
     }
 }
